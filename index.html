@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>דייט ליום האהבה</title>
+
+  <style>
+    :root{
+      --bg1:#0b1020;
+      --bg2:#1b0b2a;
+      --pink:#ff4d8d;
+      --pink2:#ff7ab6;
+      --white:#fff;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+      min-height:100vh;
+      overflow:hidden;
+      background: radial-gradient(1200px 700px at 20% 10%, rgba(255,77,141,.18), transparent 60%),
+                  radial-gradient(900px 600px at 80% 20%, rgba(255,122,182,.14), transparent 55%),
+                  linear-gradient(160deg, var(--bg1), var(--bg2));
+      color: var(--white);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+
+    /* לבבות ברקע */
+    .hearts-layer{
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:0;
+      opacity:.9;
+    }
+    .heart{
+      position:absolute;
+      font-size:18px;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.25));
+      animation: floatUp linear infinite;
+      user-select:none;
+      will-change: transform, opacity;
+    }
+    @keyframes floatUp{
+      0%   { transform: translateY(110vh) translateX(0) rotate(0deg) scale(var(--s,1)); opacity:0; }
+      10%  { opacity:1; }
+      100% { transform: translateY(-20vh) translateX(var(--dx, 0px)) rotate(var(--r, 360deg)) scale(var(--s,1)); opacity:0; }
+    }
+
+    .card{
+      position:relative;
+      z-index:2;
+      width:min(680px, 92vw);
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 24px;
+      padding: 28px 22px 26px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
+      backdrop-filter: blur(12px);
+      text-align:center;
+    }
+
+    h1{
+      margin: 0 0 10px;
+      font-size: clamp(22px, 3.3vw, 34px);
+      line-height:1.35;
+      letter-spacing:.2px;
+    }
+
+    .sub{
+      margin: 0 0 18px;
+      opacity:.9;
+      font-size: 15px;
+    }
+
+    .btns-wrap{
+      position:relative;
+      height: 140px; /* מקום לבריחה של "לא" */
+      margin-top: 14px;
+    }
+
+    .btn{
+      border:0;
+      border-radius: 999px;
+      padding: 14px 22px;
+      font-size: 18px;
+      cursor:pointer;
+      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      font-weight:700;
+    }
+
+    #yesBtn{
+      background: linear-gradient(135deg, var(--pink), var(--pink2));
+      color:white;
+      box-shadow: 0 12px 28px rgba(255,77,141,.25);
+      transform: scale(1);
+      margin-inline: 10px;
+    }
+    #yesBtn:hover{ filter: brightness(1.05); }
+
+    #noBtn{
+      position:absolute;
+      left: 50%;
+      top: 70px;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,.12);
+      color: rgba(255,255,255,.9);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 10px 26px rgba(0,0,0,.25);
+    }
+
+    .result{
+      margin-top: 10px;
+      min-height: 28px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffd1e3;
+      text-shadow: 0 2px 12px rgba(255,77,141,.25);
+    }
+
+    /* קונפטי לבבות קטנים */
+    .pop-heart{
+      position:fixed;
+      font-size: 18px;
+      pointer-events:none;
+      z-index:5;
+      animation: pop 900ms ease-out forwards;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.25));
+    }
+    @keyframes pop{
+      0%{ transform: translate(-50%,-50%) scale(.8); opacity:1; }
+      100%{ transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.6); opacity:0; }
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      .heart, .pop-heart{ animation: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="hearts-layer" id="heartsLayer" aria-hidden="true"></div>
+
+  <div class="card">
+    <h1>נעמה בלומר, האם תהיי הדייט שלי ליום האהבה?</h1>
+    <p class="sub">רמז: הלא קצת ביישן 😇</p>
+
+    <div>
+      <button class="btn" id="yesBtn">כן 💖</button>
+    </div>
+
+    <div class="btns-wrap" id="arena">
+      <button class="btn" id="noBtn">לא 🙈</button>
+    </div>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    // ===== לבבות ברקע =====
+    const heartsLayer = document.getElementById("heartsLayer");
+    const heartChars = ["💗","💖","💘","💝","💞","💓","❤️","🩷"];
+
+    function rand(min, max){ return Math.random() * (max - min) + min; }
+
+    function spawnBackgroundHeart(){
+      const el = document.createElement("div");
+      el.className = "heart";
+      el.textContent = heartChars[Math.floor(Math.random() * heartChars.length)];
+
+      const left = rand(0, 100);
+      const size = rand(14, 34);
+      const duration = rand(6, 14);
+      const dx = rand(-80, 80);
+      const rot = rand(180, 520);
+
+      el.style.left = left + "vw";
+      el.style.setProperty("--s", (size / 22).toFixed(2));
+      el.style.setProperty("--dx", dx + "px");
+      el.style.setProperty("--r", rot + "deg");
+      el.style.animationDuration = duration + "s";
+      el.style.opacity = "0";
+
+      heartsLayer.appendChild(el);
+      setTimeout(() => el.remove(), duration * 1000);
+    }
+
+    // יותר צפוף לבבות
+    for(let i=0;i<35;i++){
+      setTimeout(spawnBackgroundHeart, i * 120);
+    }
+    setInterval(spawnBackgroundHeart, 220);
+
+    // ===== כן/לא מתנהגים כמו שביקשת =====
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn  = document.getElementById("noBtn");
+    const arena  = document.getElementById("arena");
+    const result = document.getElementById("result");
+
+    let yesScale = 1;
+
+    function popHearts(x, y, count=10){
+      for(let i=0;i<count;i++){
+        const h = document.createElement("div");
+        h.className = "pop-heart";
+        h.textContent = heartChars[Math.floor(Math.random() * heartChars.length)];
+        h.style.left = x + "px";
+        h.style.top  = y + "px";
+        h.style.setProperty("--x", `${rand(-120,120)}px`);
+        h.style.setProperty("--y", `${rand(-140,80)}px`);
+        h.style.fontSize = `${rand(14,26)}px`;
+        document.body.appendChild(h);
+        setTimeout(()=>h.remove(), 950);
+      }
+    }
+
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+    function moveNoButton(){
+      // בכל ניסיון ללחוץ/להתקרב ל"לא" => ה"כן" גדל
+      yesScale = clamp(yesScale + 0.12, 1, 2.8);
+      yesBtn.style.transform = `scale(${yesScale})`;
+
+      // להזיז את "לא" למיקום חדש בתוך הזירה
+      const arenaRect = arena.getBoundingClientRect();
+      const btnRect = noBtn.getBoundingClientRect();
+
+      const padding = 10;
+      const maxX = arenaRect.width - btnRect.width - padding;
+      const maxY = arenaRect.height - btnRect.height - padding;
+
+      const x = rand(padding, Math.max(padding, maxX));
+      const y = rand(padding, Math.max(padding, maxY));
+
+      // position absolute בתוך arena
+      noBtn.style.left = x + "px";
+      noBtn.style.top  = y + "px";
+      noBtn.style.transform = "translateX(0)";
+    }
+
+    // לברוח גם כשמנסים ללחוץ וגם כשמתקרבים עם העכבר
+    noBtn.addEventListener("mouseenter", moveNoButton);
+    noBtn.addEventListener("touchstart", (e)=>{ e.preventDefault(); moveNoButton(); }, {passive:false});
+    noBtn.addEventListener("click", (e)=>{ e.preventDefault(); moveNoButton(); });
+
+    yesBtn.addEventListener("click", (e)=>{
+      const x = e.clientX ?? (window.innerWidth/2);
+      const y = e.clientY ?? (window.innerHeight/2);
+      popHearts(x, y, 18);
+      result.textContent = "יאאאא! 🥹💘 קבענו! יום האהבה—אנחנו.";
+      // קצת "זוהר" ל-כן
+      yesBtn.style.boxShadow = "0 16px 45px rgba(255,77,141,.45)";
+      yesBtn.style.filter = "brightness(1.08)";
+    });
+
+    // אם המשתמש מתקרב ל"לא" עם העכבר (אבל לא בדיוק עליו) — נבריח אותו גם
+    document.addEventListener("mousemove", (e)=>{
+      const r = noBtn.getBoundingClientRect();
+      const cx = r.left + r.width/2;
+      const cy = r.top + r.height/2;
+      const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+      if(dist < 110){ moveNoButton(); }
+    }, {passive:true});
+  </script>
+</body>
+</html>
