@@ -146,17 +146,22 @@
     function rand(min,max){ return Math.random()*(max-min)+min; }
 
     function spawnHeart(){
-      const h = document.createElement("div");
-      h.className = "heart";
-      h.textContent = heartChars[Math.floor(Math.random()*heartChars.length)];
-      h.style.left = rand(0,100) + "vw";
-      h.style.fontSize = rand(16,32) + "px";
-      h.style.setProperty("--s", rand(0.8,1.4));
-      h.style.setProperty("--dx", rand(-80,80)+"px");
-      h.style.animationDuration = rand(8,16)+"s";
-      heartsLayer.appendChild(h);
-      setTimeout(()=>h.remove(),16000);
-    }
+  const h = document.createElement("div");
+  h.className = "heart";
+  h.textContent = heartChars[Math.floor(Math.random()*heartChars.length)];
+
+  // פיזור גם בגובה המסך
+  h.style.left = rand(0,100) + "vw";
+  h.style.top  = rand(-20,100) + "vh";
+
+  h.style.fontSize = rand(16,32) + "px";
+  h.style.setProperty("--s", rand(0.8,1.4));
+  h.style.setProperty("--dx", rand(-80,80)+"px");
+  h.style.animationDuration = rand(10,20)+"s";
+
+  heartsLayer.appendChild(h);
+  setTimeout(()=>h.remove(),20000);
+}
 
     for(let i=0;i<30;i++) setTimeout(spawnHeart, i*200);
     setInterval(spawnHeart, 400);
