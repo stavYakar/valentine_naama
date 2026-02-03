@@ -42,17 +42,17 @@
 
     .heart{
       position:absolute;
-      font-size:22px;
-      opacity:1;
-      animation: floatUp linear infinite;
+      opacity:.95;
       user-select:none;
       will-change: transform, opacity;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.22));
+      animation: bob 3.8s ease-in-out infinite;
     }
 
-    @keyframes floatUp{
-      0%   { transform: translateY(110vh) translateX(0) scale(var(--s,1)); opacity:0; }
-      10%  { opacity:1; }
-      100% { transform: translateY(-20vh) translateX(var(--dx,0px)) scale(var(--s,1)); opacity:1; }
+    @keyframes bob{
+      0%   { transform: translate(0, 0) rotate(0deg) scale(var(--s,1)); }
+      50%  { transform: translate(var(--dx, 8px), var(--dy, -10px)) rotate(var(--r, 8deg)) scale(var(--s,1)); }
+      100% { transform: translate(0, 0) rotate(0deg) scale(var(--s,1)); }
     }
 
     .card{
@@ -62,7 +62,7 @@
       background: rgba(255,255,255,.06);
       border: 1px solid rgba(255,255,255,.12);
       border-radius: 24px;
-      padding: 28px 22px;
+      padding: 28px 22px 26px;
       box-shadow: 0 18px 60px rgba(0,0,0,.35);
       backdrop-filter: blur(12px);
       text-align:center;
@@ -72,6 +72,7 @@
       margin: 0 0 18px;
       font-size: clamp(22px, 3.3vw, 34px);
       line-height:1.35;
+      letter-spacing:.2px;
     }
 
     .btns-wrap{
@@ -86,15 +87,18 @@
       padding: 14px 22px;
       font-size: 18px;
       cursor:pointer;
-      transition: transform .15s ease, filter .15s ease;
+      transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
       font-weight:700;
     }
 
     #yesBtn{
       background: linear-gradient(135deg, var(--pink), var(--pink2));
       color:white;
+      box-shadow: 0 12px 28px rgba(255,77,141,.25);
       transform: scale(1);
-      margin-bottom: 20px;
+      margin-inline: 10px;
     }
 
     #noBtn{
@@ -102,38 +106,66 @@
       left: 50%;
       top: 70px;
       transform: translateX(-50%);
-      background: rgba(255,255,255,.15);
-      color:white;
+      background: rgba(255,255,255,.12);
+      color: rgba(255,255,255,.95);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 10px 26px rgba(0,0,0,.25);
     }
 
     .result{
-      margin-top: 14px;
+      margin-top: 12px;
+      min-height: 28px;
       font-size: 18px;
       font-weight: 700;
       color: #ffd1e3;
+      text-shadow: 0 2px 12px rgba(255,77,141,.25);
     }
 
-    /* מצב שבו אנימציות כבויות */
-    @media (prefers-reduced-motion: reduce){
-      .heart{
-        animation: none !important;
-        opacity: 1 !important;
-        transform: translateY(0) scale(var(--s,1));
-      }
+    /* מצב "רק כן" */
+    body.only-yes .card{
+      background: transparent;
+      border: none;
+      box-shadow: none;
+      backdrop-filter: none;
+      padding: 0;
     }
+    body.only-yes h1,
+    body.only-yes .btns-wrap,
+    body.only-yes .result{
+      display:none;
+    }
+    body.only-yes #yesBtn{
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%,-50%) scale(var(--yesScale, 12));
+      z-index: 9999;
+      box-shadow: 0 30px 80px rgba(255,77,141,.45);
+      filter: brightness(1.08);
+    }
+
+    /* Reduced motion: עדיין רואים לבבות */
+    @media (prefers-reduced-motion: reduce){
+      .heart{ animation: none !important; opacity: 1 !important; }
+    }
+
+    /* טאץ' קטן: סיבוב עדין לכפתור כן */
+    #yesBtn:hover{ filter: brightness(1.06); }
   </style>
 </head>
 
 <body>
-  <div class="hearts-layer" id="heartsLayer"></div>
+  <div class="hearts-layer" id="heartsLayer" aria-hidden="true"></div>
 
   <div class="card">
     <h1>נעמה בלומר, האם תהיי הדייט שלי ליום האהבה?</h1>
 
-    <button class="btn" id="yesBtn">כן 💖</button>
+    <div>
+      <button class="btn" id="yesBtn">כן 💖</button>
+    </div>
 
     <div class="btns-wrap" id="arena">
-      <button class="btn" id="noBtn">לא 🙈</button>
+      <button class="btn" id="noBtn">לא 😢</button>
     </div>
 
     <div class="result" id="result"></div>
@@ -141,30 +173,39 @@
 
   <script>
     const heartsLayer = document.getElementById("heartsLayer");
-    const heartChars = ["💖","💘","💝","💞","💓","❤️","🩷"];
+    const heartChars = ["💗","💖","💘","💝","💞","💓","❤️","🩷"];
 
-    function rand(min,max){ return Math.random()*(max-min)+min; }
+    function rand(min, max){ return Math.random() * (max - min) + min; }
 
-    function spawnHeart(){
-  const h = document.createElement("div");
-  h.className = "heart";
-  h.textContent = heartChars[Math.floor(Math.random()*heartChars.length)];
+    // לבבות בכל המסך (לא פס למעלה)
+    function spawnBackgroundHeart(){
+      const el = document.createElement("div");
+      el.className = "heart";
+      el.textContent = heartChars[Math.floor(Math.random() * heartChars.length)];
 
-  // פיזור גם בגובה המסך
-  h.style.left = rand(0,100) + "vw";
-  h.style.top  = rand(-20,100) + "vh";
+      el.style.left = rand(0, 100) + "vw";
+      el.style.top  = rand(0, 100) + "vh";
 
-  h.style.fontSize = rand(16,32) + "px";
-  h.style.setProperty("--s", rand(0.8,1.4));
-  h.style.setProperty("--dx", rand(-80,80)+"px");
-  h.style.animationDuration = rand(10,20)+"s";
+      const size = rand(14, 34);
+      el.style.fontSize = size + "px";
+      el.style.setProperty("--s", (size / 22).toFixed(2));
+      el.style.setProperty("--dx", rand(-18, 18) + "px");
+      el.style.setProperty("--dy", rand(-18, 18) + "px");
+      el.style.setProperty("--r",  rand(-10, 10) + "deg");
+      el.style.animationDuration = rand(2.8, 5.2) + "s";
+      el.style.opacity = rand(0.65, 0.98).toFixed(2);
 
-  heartsLayer.appendChild(h);
-  setTimeout(()=>h.remove(),20000);
-}
+      heartsLayer.appendChild(el);
 
-    for(let i=0;i<30;i++) setTimeout(spawnHeart, i*200);
-    setInterval(spawnHeart, 400);
+      // רענון קל: מחליפים לבבות מדי פעם כדי שהמסך "יחיה"
+      const life = rand(12000, 22000);
+      setTimeout(() => el.remove(), life);
+    }
+
+    for(let i=0;i<70;i++){
+      setTimeout(spawnBackgroundHeart, i * 40);
+    }
+    setInterval(spawnBackgroundHeart, 220);
 
     const yesBtn = document.getElementById("yesBtn");
     const noBtn  = document.getElementById("noBtn");
@@ -173,24 +214,56 @@
 
     let yesScale = 1;
 
-    function moveNo(){
-      yesScale = Math.min(yesScale + 0.12, 2.6);
-      yesBtn.style.transform = `scale(${yesScale})`;
+    function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
-      const maxX = arena.clientWidth - noBtn.offsetWidth;
-      const maxY = arena.clientHeight - noBtn.offsetHeight;
-
-      noBtn.style.left = rand(0,maxX)+"px";
-      noBtn.style.top  = rand(0,maxY)+"px";
-      noBtn.style.transform = "none";
+    function setOnlyYesMode(){
+      document.body.classList.add("only-yes");
+      document.body.style.setProperty("--yesScale", Math.max(yesScale, 12).toFixed(2));
     }
 
-    noBtn.addEventListener("mouseenter", moveNo);
-    noBtn.addEventListener("click", e => { e.preventDefault(); moveNo(); });
-    noBtn.addEventListener("touchstart", e => { e.preventDefault(); moveNo(); });
+    function moveNoButton(){
+      yesScale = clamp(yesScale + 0.55, 1, 18);
+      yesBtn.style.transform = `scale(${yesScale})`;
+
+      if(yesScale >= 6.2){
+        setOnlyYesMode();
+        return;
+      }
+
+      const padding = 10;
+      const maxX = arena.clientWidth  - noBtn.offsetWidth  - padding;
+      const maxY = arena.clientHeight - noBtn.offsetHeight - padding;
+
+      const x = rand(padding, Math.max(padding, maxX));
+      const y = rand(padding, Math.max(padding, maxY));
+
+      noBtn.style.left = x + "px";
+      noBtn.style.top  = y + "px";
+      noBtn.style.transform = "translateX(0)";
+    }
+
+    noBtn.addEventListener("mouseenter", moveNoButton);
+    noBtn.addEventListener("click", (e)=>{ e.preventDefault(); moveNoButton(); });
+    noBtn.addEventListener("touchstart", (e)=>{ e.preventDefault(); moveNoButton(); }, {passive:false});
+
+    // גם אם מתקרבים ל"לא" עם העכבר
+    document.addEventListener("mousemove", (e)=>{
+      if(document.body.classList.contains("only-yes")) return;
+      const r = noBtn.getBoundingClientRect();
+      const cx = r.left + r.width/2;
+      const cy = r.top  + r.height/2;
+      const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+      if(dist < 120) moveNoButton();
+    }, {passive:true});
 
     yesBtn.addEventListener("click", ()=>{
+      if(document.body.classList.contains("only-yes")){
+        // להשאיר מצב "רק כן" גם אחרי לחיצה
+        setOnlyYesMode();
+      }
       result.textContent = "יא שמנמנה מחכה לך לדייט רק אני ואת❤️";
+      yesBtn.style.boxShadow = "0 18px 55px rgba(255,77,141,.45)";
+      yesBtn.style.filter = "brightness(1.08)";
     });
   </script>
 </body>
